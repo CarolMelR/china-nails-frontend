@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+}
+
+html {
+  width: 100%;
+}
+
+body {
+  min-width: 0;
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+}
+
+#root {
+  min-width: 0;
+  width: 100%;
+}
+
+.mobile-data-list {
+  display: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  min-width: 0;
+  max-width: 100%;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .admin-layout-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+  }
+
+  .admin-layout-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .admin-layout-header-nav {
+    flex-wrap: wrap;
+  }
+
+  .admin-layout-main {
+    padding: 1.5rem 1rem;
+  }
+
+}
+
+.admin-layout-main,
+.admin-layout-main > * {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  :root {
+    font-size: 15px;
+  }
+
+  .admin-layout-header-actions a,
+  .admin-layout-header-actions button,
+  .admin-layout-header-nav a {
+    padding-inline: 0.7rem;
+    font-size: 0.75rem;
+  }
+
+  .mobile-data-list {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .responsive-form-card {
+    padding: 1rem;
+  }
+
+  .responsive-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1130px) {
+  .desktop-data-table {
+    display: none;
+  }
+
+  .mobile-data-list {
+    display: grid;
+  }
+}
