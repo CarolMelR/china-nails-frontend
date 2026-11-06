@@ -7,7 +7,7 @@ interface DatabaseConnectionResponse {
   message: string
 }
 
-const whatsappUrl = new URL('https://wa.me/525535177179')
+const whatsappUrl = new URL('https://wa.me/5215662590130')
 whatsappUrl.searchParams.set(
   'text',
   'Hola, me gustaría obtener más información sobre sus servicios de uñas.',
@@ -127,7 +127,7 @@ export const Home: FC = () => {
               </li>
             </ul>
             <a
-              aria-label="Enviar mensaje por WhatsApp al 55 3517 7179"
+              aria-label="Enviar mensaje por WhatsApp al 56 6259 0130"
               className="mt-4 inline-flex items-center justify-center rounded-full bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1DA851] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128C7E]"
               href={whatsappUrl.toString()}
               rel="noopener noreferrer"
