@@ -173,12 +173,12 @@ export const Agenda: FC = () => {
                         {statusLabels[appointment.status]}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="min-w-[245px] px-5 py-4">
                       {(appointment.status === 'pending' ||
                         appointment.status === 'confirmed') && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-start gap-2">
                           <button
-                            className="whitespace-nowrap rounded-full bg-rose-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-950 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
+                            className="min-h-10 whitespace-nowrap rounded-full bg-rose-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-950 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
                             disabled={!appointment.serviceFinished}
                             onClick={() => openModal(appointment, 'payment')}
                             type="button"
@@ -186,12 +186,12 @@ export const Agenda: FC = () => {
                             Completar cita
                           </button>
                           {!appointment.serviceFinished && (
-                            <span className="text-xs text-stone-500">
+                            <span className="pl-2 text-xs leading-5 text-stone-500">
                               Al terminar el servicio
                             </span>
                           )}
                           <button
-                            className="whitespace-nowrap rounded-full border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-600 transition hover:bg-stone-50"
+                            className="min-h-10 whitespace-nowrap rounded-full border border-stone-200 px-4 py-2 text-xs font-semibold text-stone-600 transition hover:bg-stone-50"
                             onClick={() => openModal(appointment, 'cancel')}
                             type="button"
                           >

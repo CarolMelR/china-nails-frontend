@@ -1,5 +1,6 @@
 import { useEffect, useState, type FC } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/useAuth'
 import { buildUrl } from '../../lib/api'
 
 interface DatabaseConnectionResponse {
@@ -14,9 +15,18 @@ whatsappUrl.searchParams.set(
 )
 
 export const Home: FC = () => {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [connectionState, setConnectionState] = useState<
     'checking' | 'connected' | 'error'
   >('checking')
+
+  const handleCreateAccount = () => {
+    if (user) {
+      signOut()
+    }
+    navigate('/registro')
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -62,16 +72,26 @@ export const Home: FC = () => {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               className="inline-flex rounded-full bg-rose-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-900/15 transition hover:-translate-y-0.5 hover:bg-rose-950"
-              to="/login"
+              to={user ? (user.role === 'admin' ? '/admin' : '/cliente') : '/login'}
             >
-              Reserva tu cita
+              {user ? 'Ir a mi espacio' : 'Reserva tu cita'}
             </Link>
-            <Link
-              className="inline-flex rounded-full border border-rose-300 bg-white/70 px-6 py-3 text-sm font-semibold text-rose-950 transition hover:bg-white"
-              to="/registro"
-            >
-              Crear una cuenta
-            </Link>
+            {user ? (
+              <button
+                className="inline-flex rounded-full border border-rose-300 bg-white/70 px-6 py-3 text-sm font-semibold text-rose-950 transition hover:bg-white"
+                onClick={handleCreateAccount}
+                type="button"
+              >
+                Cerrar sesión y crear cuenta
+              </button>
+            ) : (
+              <Link
+                className="inline-flex rounded-full border border-rose-300 bg-white/70 px-6 py-3 text-sm font-semibold text-rose-950 transition hover:bg-white"
+                to="/registro"
+              >
+                Crear una cuenta
+              </Link>
+            )}
           </div>
         </div>
         <div className="mx-auto flex w-full max-w-[350px] flex-col gap-3">
@@ -128,7 +148,7 @@ export const Home: FC = () => {
             </ul>
             <a
               aria-label="Enviar mensaje por WhatsApp al 56 6259 0130"
-              className="mt-4 inline-flex items-center justify-center rounded-full bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1DA851] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128C7E]"
+              className="mt-4 inline-flex items-center justify-center rounded-full bg-[#187A55] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#125E41] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#125E41]"
               href={whatsappUrl.toString()}
               rel="noopener noreferrer"
               target="_blank"
