@@ -1,5 +1,6 @@
 import { useEffect, useState, type FC } from 'react'
 import { Link } from 'react-router-dom'
+import { createApiUrl } from '../../lib/api'
 
 interface DatabaseConnectionResponse {
   success: boolean
@@ -20,7 +21,7 @@ export const Home: FC = () => {
   useEffect(() => {
     let cancelled = false
 
-    fetch('http://localhost/china-nails-api/conexion.php')
+    fetch(createApiUrl('conexion.php'))
       .then(async (response) => {
         const result = (await response.json()) as DatabaseConnectionResponse
         if (!response.ok || !result.success) {
