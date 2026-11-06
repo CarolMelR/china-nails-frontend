@@ -1,5 +1,5 @@
 export const AUTH_TOKEN_KEY = 'china-nails-token'
-export const API_BASE_URL = import.meta.env.VITE_API_URL
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://china-nails-api.onrender.com').replace(/\/+$/, '')
 
 interface ApiErrorPayload {
   message?: string
@@ -19,16 +19,7 @@ export class ApiError extends Error {
 }
 
 export function createApiUrl(file: string): URL {
-  const baseUrl = API_BASE_URL?.trim()
-  if (!baseUrl) {
-    throw new ApiError('Falta configurar la variable VITE_API_URL.', 0)
-  }
-
-  try {
-    return new URL(file, `${baseUrl.replace(/\/+$/, '')}/`)
-  } catch {
-    throw new ApiError('La variable VITE_API_URL no contiene una URL válida.', 0)
-  }
+  return new URL(file, `${API_BASE_URL}/`)
 }
 
 export async function apiRequest<T>(
