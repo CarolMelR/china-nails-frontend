@@ -1,5 +1,8 @@
 export const AUTH_TOKEN_KEY = 'china-nails-token'
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://china-nails-api.onrender.com').replace(/\/+$/, '')
+export const API_BASE_URL = 'https://china-nails-api.onrender.com'
+
+export const buildUrl = (path: string) =>
+  `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 
 interface ApiErrorPayload {
   message?: string
@@ -16,10 +19,6 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
   }
-}
-
-export function createApiUrl(file: string): URL {
-  return new URL(file, `${API_BASE_URL}/`)
 }
 
 export async function apiRequest<T>(
@@ -39,11 +38,11 @@ export async function apiRequest<T>(
   }
 
   const [route, query = ''] = path.split('?', 2)
-  const endpoint = createApiUrl('api.php')
-  endpoint.searchParams.set('path', route)
+  const searchParams = new URLSearchParams({ path: route })
   new URLSearchParams(query).forEach((value, key) => {
-    endpoint.searchParams.append(key, value)
+    searchParams.append(key, value)
   })
+  const endpoint = `${buildUrl('api.php')}?${searchParams.toString()}`
 
   let response: Response
   try {
