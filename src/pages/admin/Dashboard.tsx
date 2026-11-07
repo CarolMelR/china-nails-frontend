@@ -115,7 +115,7 @@ export const Dashboard: FC = () => {
       label: 'Clientas',
       value: String(clientCount),
       detail: 'Con citas registradas',
-      color: 'bg-violet-100 text-violet-800',
+      color: 'bg-[#30203f] text-violet-100',
       icon: '04',
     },
   ]
