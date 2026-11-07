@@ -95,13 +95,13 @@ export const Home: FC = () => {
           </div>
         </div>
         <div className="mx-auto flex w-full max-w-[350px] flex-col gap-3">
-          <div className="aspect-square w-full overflow-hidden rounded-[2rem] bg-[#fbe0e0] shadow-xl shadow-rose-950/10">
+          <div className="aspect-square w-full overflow-hidden rounded-[2rem] border border-violet-500/30 bg-[#0b0811] p-2 shadow-2xl shadow-violet-950/40">
             <img
               alt="Logotipo de China Nails"
-              className="h-full w-full object-cover"
-              height={380}
-              src="/china-nails-logo.png"
-              width={380}
+              className="h-full w-full rounded-[1.5rem] object-contain"
+              height={768}
+              src="/china-nails-logo-new.png"
+              width={768}
             />
           </div>
           <div className="rounded-2xl bg-white/90 px-5 py-3 shadow-lg">
@@ -148,7 +148,7 @@ export const Home: FC = () => {
             </ul>
             <a
               aria-label="Enviar mensaje por WhatsApp al 56 6259 0130"
-              className="mt-4 inline-flex items-center justify-center rounded-full bg-[#187A55] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#125E41] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#125E41]"
+              className="mt-4 inline-flex items-center justify-center rounded-full bg-violet-700 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-violet-950/30 transition hover:bg-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
               href={whatsappUrl.toString()}
               rel="noopener noreferrer"
               target="_blank"

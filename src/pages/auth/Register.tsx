@@ -59,13 +59,13 @@ export const Register: FC = () => {
         Inicio
       </Link>
       <div className="pointer-events-none absolute -left-32 top-10 h-80 w-80 rounded-full bg-rose-200/50 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-orange-100 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-violet-900/20 blur-3xl" />
 
       <section className="relative grid w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-rose-950/10 ring-1 ring-rose-100 md:grid-cols-[0.9fr_1.1fr]">
-        <div className="relative hidden min-h-[650px] overflow-hidden bg-[#eac8c1] p-10 md:flex md:flex-col md:justify-between">
-          <div className="absolute -right-20 -top-10 h-72 w-72 rounded-full bg-[#d9a9a4]" />
-          <div className="absolute -bottom-16 -left-20 h-80 w-80 rounded-full bg-[#f6e2dc]" />
-          <p className="relative font-serif text-xl font-semibold text-[#402b35]">
+        <div className="relative hidden min-h-[650px] overflow-hidden bg-[#160d24] p-10 md:flex md:flex-col md:justify-between">
+          <div className="absolute -right-20 -top-10 h-72 w-72 rounded-full bg-violet-800/60 blur-sm" />
+          <div className="absolute -bottom-16 -left-20 h-80 w-80 rounded-full bg-fuchsia-700/30 blur-sm" />
+          <p className="relative font-serif text-xl font-semibold text-[#f1e8ff]">
             China Nails
           </p>
           <div className="relative">
@@ -75,11 +75,11 @@ export const Register: FC = () => {
             <h1 className="mt-4 font-serif text-5xl leading-tight text-[#402b35]">
               Tu próxima cita comienza aquí.
             </h1>
-            <p className="mt-4 max-w-xs text-sm leading-6 text-[#624b50]">
+            <p className="mt-4 max-w-xs text-sm leading-6 text-[#c7b9d8]">
               Crea tu cuenta para reservar y gestionar tus visitas.
             </p>
           </div>
-          <span className="relative text-xs tracking-wider text-[#624b50]">
+          <span className="relative text-xs tracking-wider text-[#c7b9d8]">
             CUIDADO · ESTILO · BIENESTAR
           </span>
         </div>

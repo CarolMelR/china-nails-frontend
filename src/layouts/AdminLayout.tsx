@@ -13,7 +13,7 @@ export const AdminLayout: FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#fbf4f1] text-[#402b35]">
+    <div className="min-h-screen bg-[#fbf4f1] text-[#f1e8ff]">
       <header className="admin-layout-header flex min-h-[72px] flex-wrap items-center justify-between gap-3 border-b border-rose-100 bg-white/80 px-6 py-3 sm:px-10">
         <span className="font-serif text-xl font-semibold">China Nails</span>
         <div className="admin-layout-header-actions flex items-center gap-3">

@@ -307,7 +307,7 @@ export const Dashboard: FC = () => {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-2xl bg-[#edcfca] p-6 sm:p-7">
+        <article className="rounded-2xl border border-violet-500/25 bg-[#20172b] p-6 shadow-lg shadow-violet-950/15 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-900/70">
             Agenda
           </p>

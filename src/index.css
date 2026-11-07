@@ -1,5 +1,59 @@
 @import "tailwindcss";
 
+@theme {
+  --color-rose-50: #f3e8ff;
+  --color-rose-100: #e9d5ff;
+  --color-rose-200: #d8b4fe;
+  --color-rose-300: #c084fc;
+  --color-rose-400: #a855f7;
+  --color-rose-500: #9333ea;
+  --color-rose-600: #7e22ce;
+  --color-rose-700: #6b21a8;
+  --color-rose-800: #581c87;
+  --color-rose-900: #6d28d9;
+  --color-rose-950: #4c1d95;
+
+  --color-stone-50: #100b18;
+  --color-stone-100: #1a1323;
+  --color-stone-200: #2b2038;
+  --color-stone-300: #3d2d50;
+  --color-stone-400: #78698a;
+  --color-stone-500: #9e90ae;
+  --color-stone-600: #b9adc8;
+  --color-stone-700: #d0c6dc;
+  --color-stone-800: #e7e0f0;
+  --color-stone-900: #f7f3fc;
+  --color-slate-900: #f7f3fc;
+
+  --color-orange-100: #24162f;
+  --color-orange-800: #d8b4fe;
+
+  --color-emerald-50: #10231c;
+  --color-emerald-100: #17362b;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #86efc2;
+  --color-emerald-900: #a7f3d0;
+  --color-emerald-950: #d1fae5;
+
+  --color-sky-50: #111d2a;
+  --color-sky-100: #162d40;
+  --color-sky-800: #7dd3fc;
+  --color-sky-900: #bae6fd;
+  --color-sky-950: #e0f2fe;
+
+  --color-amber-50: #29200f;
+  --color-amber-100: #38290f;
+  --color-amber-800: #fcd34d;
+
+  --color-red-50: #2a121d;
+  --color-red-700: #fda4af;
+
+  --color-violet-100: #251333;
+  --color-violet-800: #c084fc;
+  --color-violet-900: #d8b4fe;
+  --color-violet-950: #e9d5ff;
+}
+
 *,
 *::before,
 *::after {
@@ -7,6 +61,10 @@
 }
 
 :root {
+  color-scheme: dark;
+  --cn-background: #0b0811;
+  --cn-surface: #17111f;
+  --cn-surface-raised: #20172b;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -25,6 +83,11 @@ body {
   min-height: 100vh;
   width: 100%;
   margin: 0;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(91 33 182 / 18%), transparent 34rem),
+    radial-gradient(ellipse at 90% 20%, rgb(126 34 206 / 11%), transparent 30rem),
+    var(--cn-background);
+  color: #f7f3fc;
 }
 
 #root {
@@ -49,6 +112,37 @@ img,
 svg,
 video {
   max-width: 100%;
+}
+
+[class~="bg-white"],
+[class~="bg-white/70"],
+[class~="bg-white/80"],
+[class~="bg-white/90"] {
+  background-color: var(--cn-surface);
+}
+
+[class~="bg-[#fff8f6]"],
+[class~="bg-[#fbf4f1]"],
+[class~="bg-[#fff1f1]"],
+[class~="bg-[#f5fbf7]"] {
+  background-color: var(--cn-background);
+}
+
+[class~="bg-[#fbe0e0]"],
+[class~="bg-[#edcfca]"] {
+  background-color: var(--cn-surface-raised);
+}
+
+[class~="text-[#402b35]"] {
+  color: #f1e8ff;
+}
+
+[class~="text-[#624b50]"] {
+  color: #c7b9d8;
+}
+
+[class*="text-rose-"] {
+  color: #e9d5ff;
 }
 
 @media (max-width: 768px) {
