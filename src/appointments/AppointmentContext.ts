@@ -51,11 +51,15 @@ export interface BookingCatalog {
   }
 }
 
-export interface BookingSelection {
+export interface BookingServiceSelection {
   serviceCode: string
   length: number | null
   effects: { id: string; count: number }[]
   removal: boolean
+}
+
+export interface BookingSelection {
+  services: BookingServiceSelection[]
 }
 
 export interface AvailabilityResult {

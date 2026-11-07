@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState, type FC, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppointments } from '../../appointments/useAppointments'
-import type { BookingSelection } from '../../appointments/AppointmentContext'
+import type {
+  BookingSelection,
+  BookingServiceSelection,
+} from '../../appointments/AppointmentContext'
 import { useAuth } from '../../auth/useAuth'
 
 const weekdays = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
@@ -65,10 +68,10 @@ export const Booking: FC = () => {
     error: servicesError,
   } = useAppointments()
   const [step, setStep] = useState(0)
-  const [serviceCode, setServiceCode] = useState('')
-  const [selectedLength, setSelectedLength] = useState<number | null>(null)
-  const [effectCounts, setEffectCounts] = useState<Record<string, number>>({})
-  const [removal, setRemoval] = useState(false)
+  const [selectedServices, setSelectedServices] = useState<
+    BookingServiceSelection[]
+  >([])
+  const [activeServiceIndex, setActiveServiceIndex] = useState(0)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [today] = useState(mexicoToday)
@@ -84,55 +87,63 @@ export const Booking: FC = () => {
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const activeSelection = selectedServices[activeServiceIndex]
   const selectedService = services.find(
-    (service) => service.serviceCode === serviceCode,
-  )
-  const selectedEffects = useMemo(
-    () =>
-      (catalog?.effectsByPrice ?? []).flatMap((group) =>
-        group.options.flatMap((effect) => {
-          const count = effectCounts[effect.id] ?? 0
-          return count > 0 ? [{ id: effect.id, count }] : []
-        }),
-      ),
-    [catalog, effectCounts],
+    (service) => service.serviceCode === activeSelection?.serviceCode,
   )
   const bookingSelection: BookingSelection = useMemo(
-    () => ({
-      serviceCode,
-      length: selectedService?.usesLength ? selectedLength : null,
-      effects: selectedEffects,
-      removal,
-    }),
-    [removal, selectedEffects, selectedLength, selectedService, serviceCode],
+    () => ({ services: selectedServices }),
+    [selectedServices],
   )
   const selectionKey = JSON.stringify(bookingSelection)
-  const basePrice = selectedService
-    ? selectedService.usesLength
-      ? selectedService.lengthPrices.find(
-          (item) => item.length === selectedLength,
-        )?.price ?? 0
-      : selectedService.price
-    : 0
-  const effectsPrice = selectedEffects.reduce((total, selection) => {
-    const price = catalog?.effectsByPrice.find((group) =>
-      group.options.some((effect) => effect.id === selection.id),
-    )?.price ?? 0
-    return total + price * selection.count
-  }, 0)
-  const removalConfig = catalog?.removals[serviceCode]
-  const removalPrice = removal ? removalConfig?.price ?? 0 : 0
+  const quoteTotals = selectedServices.reduce(
+    (totals, selection) => {
+      const technique = services.find(
+        (item) => item.serviceCode === selection.serviceCode,
+      )
+      if (!technique) return totals
+
+      const base = technique.usesLength
+        ? technique.lengthPrices.find((item) => item.length === selection.length)
+            ?.price ?? 0
+        : technique.price
+      const effects = selection.effects.reduce((subtotal, effect) => {
+        const price =
+          catalog?.effectsByPrice.find((group) =>
+            group.options.some((option) => option.id === effect.id),
+          )?.price ?? 0
+        return subtotal + price * effect.count
+      }, 0)
+      const removalConfigForService = catalog?.removals[selection.serviceCode]
+      const removal = selection.removal
+        ? removalConfigForService?.price ?? 0
+        : 0
+
+      return {
+        base: totals.base + base,
+        effects: totals.effects + effects,
+        removal: totals.removal + removal,
+        duration:
+          totals.duration +
+          technique.durationMinutes +
+          (selection.removal
+            ? removalConfigForService?.durationMinutes ?? 0
+            : 0),
+      }
+    },
+    { base: 0, effects: 0, removal: 0, duration: 0 },
+  )
+  const { base: basePrice, effects: effectsPrice, removal: removalPrice } =
+    quoteTotals
   const estimatedTotal = basePrice + effectsPrice + removalPrice
-  const estimatedDuration =
-    (selectedService?.durationMinutes ?? 0) +
-    (removal ? removalConfig?.durationMinutes ?? 0 : 0)
+  const estimatedDuration = quoteTotals.duration
   const calendarKey = `${calendarMonth}:${selectionKey}`
   const calendarAvailability =
     calendarData?.key === calendarKey ? calendarData.dates : null
   const calendarSlotCounts =
     calendarData?.key === calendarKey ? calendarData.totalSlots : null
   const calendarLoading =
-    step === 1 && Boolean(serviceCode) && !calendarAvailability
+    step === 1 && selectedServices.length > 0 && !calendarAvailability
   const availabilityKey = `${date}:${selectionKey}`
   const availabilityLoading = Boolean(date) && reservedKey !== availabilityKey
   const currentAvailableTimes =
@@ -157,7 +168,7 @@ export const Booking: FC = () => {
   const minimumCalendarMonth = today.slice(0, 7)
 
   useEffect(() => {
-    if (!date || !serviceCode || !selectedService) {
+    if (!date || selectedServices.length === 0) {
       return
     }
     let cancelled = false
@@ -184,10 +195,10 @@ export const Booking: FC = () => {
     return () => {
       cancelled = true
     }
-  }, [availabilityKey, bookingSelection, date, loadAvailability, selectedService, serviceCode])
+  }, [availabilityKey, bookingSelection, date, loadAvailability, selectedServices.length])
 
   useEffect(() => {
-    if (step !== 1 || !serviceCode) {
+    if (step !== 1 || selectedServices.length === 0) {
       return
     }
     let cancelled = false
@@ -220,7 +231,7 @@ export const Booking: FC = () => {
     return () => {
       cancelled = true
     }
-  }, [bookingSelection, calendarKey, calendarMonth, loadCalendarAvailability, serviceCode, step])
+  }, [bookingSelection, calendarKey, calendarMonth, loadCalendarAvailability, selectedServices.length, step])
 
   const handleSignOut = () => {
     signOut()
@@ -233,10 +244,51 @@ export const Booking: FC = () => {
     setError('')
   }
 
+  const addService = (serviceCode: string) => {
+    if (selectedServices.length >= 3) return
+    const service = services.find((item) => item.serviceCode === serviceCode)
+    if (!service) return
+
+    setSelectedServices((current) => [
+      ...current,
+      {
+        serviceCode,
+        length: service.usesLength
+          ? service.lengthPrices[0]?.length ?? null
+          : null,
+        effects: [],
+        removal: false,
+      },
+    ])
+    setActiveServiceIndex(selectedServices.length)
+    resetSchedule()
+  }
+
+  const updateActiveSelection = (
+    update: Partial<BookingServiceSelection>,
+  ) => {
+    setSelectedServices((current) =>
+      current.map((selection, index) =>
+        index === activeServiceIndex ? { ...selection, ...update } : selection,
+      ),
+    )
+    resetSchedule()
+  }
+
+  const removeSelectedService = (index: number) => {
+    setSelectedServices((current) =>
+      current.filter((_, serviceIndex) => serviceIndex !== index),
+    )
+    setActiveServiceIndex((current) =>
+      Math.max(0, current > index ? current - 1 : Math.min(current, selectedServices.length - 2)),
+    )
+    resetSchedule()
+  }
+
   const handleConfirm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedService || !date || !time) {
-      setError('Selecciona un servicio, una fecha y un horario.')
+    if (selectedServices.length === 0 || !date || !time) {
+      setError('Selecciona al menos un servicio, una fecha y un horario.')
       return
     }
 
@@ -340,7 +392,14 @@ export const Booking: FC = () => {
                 ¡Tu cita está registrada, {user?.displayName}!
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-stone-600">
-                Tu cita de {selectedService?.name} quedó registrada para el {date}
+                Tu cita de {selectedServices
+                  .map((selection) =>
+                    services.find(
+                      (service) => service.serviceCode === selection.serviceCode,
+                    )?.name,
+                  )
+                  .filter(Boolean)
+                  .join(', ')} quedó registrada para el {date}
                 {' '}a las {time}. El estudio confirmará los detalles contigo.
               </p>
               <button
@@ -348,7 +407,8 @@ export const Booking: FC = () => {
                 onClick={() => {
                   setConfirmed(false)
                   setStep(0)
-                  setServiceCode('')
+                  setSelectedServices([])
+                  setActiveServiceIndex(0)
                   setDate('')
                   setTime('')
                   setCalendarMonth(today.slice(0, 7))
@@ -366,7 +426,9 @@ export const Booking: FC = () => {
                     <h2 className="font-serif text-xl font-semibold text-[#402b35]">
                       Selecciona tu servicio
                     </h2>
-                    <p className="mt-1 text-sm text-stone-600">Servicio base</p>
+                    <p className="mt-1 text-sm text-stone-600">
+                      Agrega hasta 3 servicios. Puedes repetir una técnica y configurar cada servicio por separado.
+                    </p>
                   </div>
                   {servicesError && (
                     <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -375,45 +437,39 @@ export const Booking: FC = () => {
                   )}
                   <div className="grid gap-3 sm:grid-cols-2">
                     {services.map((service) => {
-                      const isSelected = service.serviceCode === serviceCode
+                      const selectedCount = selectedServices.filter(
+                        (selection) => selection.serviceCode === service.serviceCode,
+                      ).length
                       return (
                         <button
-                          aria-pressed={isSelected}
                           className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-4 focus:ring-rose-500/10 ${
-                            isSelected
-                            ? 'border-violet-400 bg-[#2b193c] ring-1 ring-violet-400 shadow-lg shadow-violet-950/25'
+                            selectedCount > 0
+                              ? 'border-violet-400 bg-[#2b193c] ring-1 ring-violet-400 shadow-lg shadow-violet-950/25'
                               : 'border-stone-200 hover:border-rose-300 hover:bg-rose-50/40'
                           }`}
+                          disabled={selectedServices.length >= 3}
                           key={service.serviceCode}
-                          onClick={() => {
-                            setServiceCode(service.serviceCode)
-                            setSelectedLength(
-                              service.usesLength
-                                ? service.lengthPrices[0]?.length ?? null
-                                : null,
-                            )
-                            setEffectCounts({})
-                            setRemoval(false)
-                            setDate('')
-                            setTime('')
-                          }}
+                          onClick={() => addService(service.serviceCode)}
                           type="button"
                         >
                           <span className="flex h-full items-center justify-between gap-3">
                             <span className="min-w-0">
-                              <span
-                                className={`block text-sm font-semibold ${
-                                  isSelected ? 'text-white' : 'text-slate-900'
-                                }`}
-                              >
+                              <span className="block text-sm font-semibold text-slate-900">
                                 {service.name}
                               </span>
-                              <span className={`mt-1 block text-xs ${isSelected ? 'text-violet-200' : 'text-stone-500'}`}>
+                              <span className="mt-1 block text-xs text-stone-500">
                                 {service.durationMinutes} min
                               </span>
-                              <span className={`mt-2 block font-semibold ${isSelected ? 'text-violet-100' : 'text-rose-600'}`}>
+                              <span className="mt-2 block font-semibold text-rose-600">
                                 {service.usesLength ? 'Desde ' : ''}
                                 {money.format(service.price)}
+                              </span>
+                              <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                selectedServices.length >= 3
+                                  ? 'bg-stone-200 text-stone-600'
+                                  : 'bg-violet-100 text-[#30163f]'
+                              }`}>
+                                {selectedCount ? `${selectedCount} agregado${selectedCount === 1 ? '' : 's'}` : '+ Agregar servicio'}
                               </span>
                             </span>
                             {serviceExamples[service.serviceCode] && (
@@ -436,6 +492,77 @@ export const Booking: FC = () => {
                       )
                     })}
                   </div>
+                  {selectedServices.length > 0 && (
+                    <section className="mt-5 rounded-xl border border-violet-300/50 bg-[#20172b] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-violet-100">
+                          Servicios seleccionados ({selectedServices.length}/3)
+                        </h3>
+                        <p className="text-xs text-stone-500">
+                          Selecciona uno para ajustar sus detalles
+                        </p>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        {selectedServices.map((selection, index) => {
+                          const name = services.find(
+                            (service) => service.serviceCode === selection.serviceCode,
+                          )?.name ?? selection.serviceCode
+                          return (
+                            <div className="flex min-w-0 items-center gap-2" key={`${selection.serviceCode}-${index}`}>
+                              <button
+                                aria-pressed={activeServiceIndex === index}
+                                className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-left text-sm ${
+                                  activeServiceIndex === index
+                                    ? 'border-violet-300 bg-violet-900/40 text-violet-100'
+                                    : 'border-stone-300 bg-stone-100 text-stone-800'
+                                }`}
+                                onClick={() => setActiveServiceIndex(index)}
+                                type="button"
+                              >
+                                <span className="block truncate font-semibold">
+                                  {index + 1}. {name}
+                                </span>
+                                <span className="mt-1 block text-xs">
+                                  {money.format(
+                                    (() => {
+                                      const technique = services.find(
+                                        (item) => item.serviceCode === selection.serviceCode,
+                                      )
+                                      if (!technique) return 0
+                                      const base = technique.usesLength
+                                        ? technique.lengthPrices.find(
+                                            (item) => item.length === selection.length,
+                                          )?.price ?? 0
+                                        : technique.price
+                                      const extras = selection.effects.reduce((sum, effect) => {
+                                        const effectPrice = catalog?.effectsByPrice.find((group) =>
+                                          group.options.some((option) => option.id === effect.id),
+                                        )?.price ?? 0
+                                        return sum + effectPrice * effect.count
+                                      }, 0)
+                                      return base + extras + (
+                                        selection.removal
+                                          ? catalog?.removals[selection.serviceCode]?.price ?? 0
+                                          : 0
+                                      )
+                                    })(),
+                                  )}
+                                </span>
+                              </button>
+                              <button
+                                aria-label={`Quitar ${name}`}
+                                className="h-9 w-9 shrink-0 rounded-full border border-rose-300 text-lg font-semibold text-rose-700 hover:bg-rose-50"
+                                onClick={() => removeSelectedService(index)}
+                                type="button"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  )}
                   {services.length === 0 && !servicesError && (
                     <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${isCatalogLoading ? 'bg-stone-100 text-stone-600' : 'bg-amber-50 text-amber-800'}`} role="status">
                       {isCatalogLoading
@@ -443,8 +570,11 @@ export const Booking: FC = () => {
                         : 'No hay técnicas disponibles por el momento.'}
                     </p>
                   )}
-                  {selectedService && catalog && (
+                  {activeSelection && selectedService && catalog && (
                     <div className="mt-6 space-y-5">
+                      <h3 className="font-serif text-lg font-semibold text-[#402b35]">
+                        Configuración: servicio {activeServiceIndex + 1} · {selectedService.name}
+                      </h3>
                       {selectedService.usesLength && (
                         <section aria-labelledby="length-label">
                           <h3 className="text-sm font-semibold text-[#402b35]" id="length-label">
@@ -453,16 +583,15 @@ export const Booking: FC = () => {
                           <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-8">
                             {selectedService.lengthPrices.map((item) => (
                               <button
-                                aria-pressed={selectedLength === item.length}
+                                aria-pressed={activeSelection.length === item.length}
                                 className={`rounded-xl border px-2 py-2 text-center transition ${
-                                  selectedLength === item.length
+                                  activeSelection.length === item.length
                                     ? 'border-violet-500 bg-[#30203f] text-violet-100'
                                     : 'border-rose-100 bg-white text-stone-700 hover:border-rose-400'
                                 }`}
                                 key={item.length}
                                 onClick={() => {
-                                  setSelectedLength(item.length)
-                                  resetSchedule()
+                                  updateActiveSelection({ length: item.length })
                                 }}
                                 type="button"
                               >
@@ -495,7 +624,19 @@ export const Booking: FC = () => {
                               </legend>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {group.options.map((effect) => {
-                                  const count = effectCounts[effect.id] ?? 0
+                                  const count =
+                                    activeSelection.effects.find(
+                                      (item) => item.id === effect.id,
+                                    )?.count ?? 0
+                                  const setEffectCount = (nextCount: number) => {
+                                    const nextEffects = activeSelection.effects.filter(
+                                      (item) => item.id !== effect.id,
+                                    )
+                                    if (nextCount > 0) {
+                                      nextEffects.push({ id: effect.id, count: nextCount })
+                                    }
+                                    updateActiveSelection({ effects: nextEffects })
+                                  }
                                   return (
                                     <div
                                       className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-[#fffaf9] px-3 py-2"
@@ -510,11 +651,7 @@ export const Booking: FC = () => {
                                           className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-lg text-rose-800 disabled:opacity-40"
                                           disabled={count === 0}
                                           onClick={() => {
-                                            setEffectCounts((current) => ({
-                                              ...current,
-                                              [effect.id]: Math.max(0, count - 1),
-                                            }))
-                                            resetSchedule()
+                                            setEffectCount(Math.max(0, count - 1))
                                           }}
                                           type="button"
                                         >
@@ -528,11 +665,7 @@ export const Booking: FC = () => {
                                           className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-lg text-rose-800 disabled:opacity-40"
                                           disabled={count === 10}
                                           onClick={() => {
-                                            setEffectCounts((current) => ({
-                                              ...current,
-                                              [effect.id]: Math.min(10, count + 1),
-                                            }))
-                                            resetSchedule()
+                                            setEffectCount(Math.min(10, count + 1))
                                           }}
                                           type="button"
                                         >
@@ -550,11 +683,10 @@ export const Booking: FC = () => {
 
                       <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-rose-100 bg-[#fffaf9] p-4">
                         <input
-                          checked={removal}
+                          checked={activeSelection.removal}
                           className="mt-1 h-4 w-4 accent-violet-700"
                           onChange={(event) => {
-                            setRemoval(event.target.checked)
-                            resetSchedule()
+                            updateActiveSelection({ removal: event.target.checked })
                           }}
                           type="checkbox"
                         />
@@ -563,9 +695,9 @@ export const Booking: FC = () => {
                             Retiro de trabajo anterior
                           </span>
                           <span className="mt-1 block text-xs text-stone-500">
-                            {money.format(removalConfig?.price ?? 0)} ·{' '}
-                            {removalConfig?.durationMinutes
-                              ? `+ ${removalConfig.durationMinutes} min`
+                            {money.format(catalog.removals[activeSelection.serviceCode]?.price ?? 0)} ·{' '}
+                            {catalog.removals[activeSelection.serviceCode]?.durationMinutes
+                              ? `+ ${catalog.removals[activeSelection.serviceCode].durationMinutes} min`
                               : 'sin tiempo adicional'}
                           </span>
                         </span>
@@ -849,9 +981,15 @@ export const Booking: FC = () => {
                       className="rounded-full bg-rose-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-stone-300"
                       disabled={
                         (step === 0 &&
-                          (!serviceCode ||
+                          (selectedServices.length === 0 ||
                             services.length === 0 ||
-                            (selectedService?.usesLength && selectedLength === null))) ||
+                            selectedServices.some((selection) => {
+                              const technique = services.find(
+                                (service) =>
+                                  service.serviceCode === selection.serviceCode,
+                              )
+                              return technique?.usesLength && selection.length === null
+                            }))) ||
                         (step === 1 &&
                           (!date || !time || availabilityLoading || Boolean(error)))
                       }

@@ -16,17 +16,8 @@ import {
   type CatalogTechnique,
 } from './AppointmentContext'
 
-const selectionParams = (selection: BookingSelection) => {
-  const query = new URLSearchParams({
-    serviceCode: selection.serviceCode,
-    effects: JSON.stringify(selection.effects),
-    removal: String(selection.removal),
-  })
-  if (selection.length !== null) {
-    query.set('length', String(selection.length))
-  }
-  return query
-}
+const selectionParams = (selection: BookingSelection) =>
+  new URLSearchParams({ services: JSON.stringify(selection.services) })
 
 export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
   const { ready, user } = useAuth()
@@ -191,7 +182,7 @@ export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
   ) => {
     await apiRequest('/appointments', {
       method: 'POST',
-      body: JSON.stringify({ ...selection, date, time }),
+      body: JSON.stringify({ services: selection.services, date, time }),
     })
   }, [])
 
