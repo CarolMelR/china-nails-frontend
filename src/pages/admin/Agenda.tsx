@@ -146,7 +146,14 @@ export const Agenda: FC = () => {
                       <p className="font-medium text-stone-800">{appointment.clientName}</p>
                       <p className="mt-1 text-xs text-stone-500">{appointment.phone}</p>
                     </td>
-                    <td className="px-5 py-4 text-stone-700">{appointment.service}</td>
+                    <td className="px-5 py-4 text-stone-700">
+                      <p>{appointment.service}</p>
+                      {appointment.notes && (
+                        <p className="mt-1 max-w-xs text-xs text-stone-500">
+                          {appointment.notes}
+                        </p>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-5 py-4 text-stone-600">
                       {money.format(appointment.price)}
                     </td>
@@ -237,6 +244,11 @@ export const Agenda: FC = () => {
                 <p className="mt-3 break-words text-sm font-medium text-stone-800">
                   {appointment.service}
                 </p>
+                {appointment.notes && (
+                  <p className="mt-1 break-words text-xs text-stone-500">
+                    {appointment.notes}
+                  </p>
+                )}
                 <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                   <div>
                     <dt className="text-stone-500">Fecha y hora</dt>

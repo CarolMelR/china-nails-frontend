@@ -250,6 +250,11 @@ export const Dashboard: FC = () => {
                     <p className="mt-1 text-sm text-stone-600">
                       {appointment.service}
                     </p>
+                    {appointment.notes && (
+                      <p className="mt-1 text-xs text-stone-500">
+                        {appointment.notes}
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-stone-500">
                       {appointment.phone} · {formatAppointmentDate(appointment.date)} ·{' '}
                       {appointment.time} · {appointment.durationMinutes} min

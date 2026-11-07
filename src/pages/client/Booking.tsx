@@ -1,27 +1,27 @@
 import { useEffect, useMemo, useState, type FC, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppointments } from '../../appointments/useAppointments'
+import type { BookingSelection } from '../../appointments/AppointmentContext'
 import { useAuth } from '../../auth/useAuth'
 
-const timeSlots = ['10:00', '11:30', '13:00', '15:00', '16:30']
 const weekdays = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const steps = ['Cotizar', 'Horario', 'Datos']
 const serviceExamples: Record<string, { alt: string; image: string }> = {
-  acrilico: {
+  ACRILICO: {
     alt: 'Ejemplo de uñas acrílicas azules',
     image: '/service-images/acrilico.jpg',
   },
-  gelish: {
-    alt: 'Ejemplo de gelish en uña natural',
+  SOFTGEL: {
+    alt: 'Ejemplo de uñas de soft gel',
+    image: '/service-images/retoque-acrilico.jpg',
+  },
+  GEL_SEMI: {
+    alt: 'Ejemplo de gel semipermanente en uña natural',
     image: '/service-images/gelish.jpg',
   },
-  spa: {
-    alt: 'Ejemplo de manicura spa',
+  RUBBER_GEL: {
+    alt: 'Ejemplo de uñas con rubber gel',
     image: '/service-images/manicura-spa.jpg',
-  },
-  retoque: {
-    alt: 'Ejemplo de retoque acrílico',
-    image: '/service-images/retoque-acrilico.jpg',
   },
 }
 const money = new Intl.NumberFormat('es-MX', {
@@ -37,11 +37,24 @@ const toDateKey = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+const mexicoToday = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
 export const Booking: FC = () => {
   const navigate = useNavigate()
   const { signOut, user } = useAuth()
   const {
     services,
+    catalog,
+    isCatalogLoading,
     clientAppointments,
     isClientAppointmentsLoading,
     clientAppointmentsError,
@@ -53,16 +66,20 @@ export const Booking: FC = () => {
   } = useAppointments()
   const [step, setStep] = useState(0)
   const [serviceCode, setServiceCode] = useState('')
+  const [selectedLength, setSelectedLength] = useState<number | null>(null)
+  const [effectCounts, setEffectCounts] = useState<Record<string, number>>({})
+  const [removal, setRemoval] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [today] = useState(() => toDateKey(new Date()))
+  const [today] = useState(mexicoToday)
   const [calendarMonth, setCalendarMonth] = useState(() => today.slice(0, 7))
   const [calendarData, setCalendarData] = useState<{
     key: string
     dates: Record<string, string[]>
+    totalSlots: Record<string, number>
   } | null>(null)
   const [calendarError, setCalendarError] = useState('')
-  const [reservedTimes, setReservedTimes] = useState<string[]>([])
+  const [availableTimes, setAvailableTimes] = useState<string[]>([])
   const [reservedKey, setReservedKey] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
@@ -70,17 +87,56 @@ export const Booking: FC = () => {
   const selectedService = services.find(
     (service) => service.serviceCode === serviceCode,
   )
-  const calendarKey = `${calendarMonth}:${serviceCode}`
+  const selectedEffects = useMemo(
+    () =>
+      (catalog?.effectsByPrice ?? []).flatMap((group) =>
+        group.options.flatMap((effect) => {
+          const count = effectCounts[effect.id] ?? 0
+          return count > 0 ? [{ id: effect.id, count }] : []
+        }),
+      ),
+    [catalog, effectCounts],
+  )
+  const bookingSelection: BookingSelection = useMemo(
+    () => ({
+      serviceCode,
+      length: selectedService?.usesLength ? selectedLength : null,
+      effects: selectedEffects,
+      removal,
+    }),
+    [removal, selectedEffects, selectedLength, selectedService, serviceCode],
+  )
+  const selectionKey = JSON.stringify(bookingSelection)
+  const basePrice = selectedService
+    ? selectedService.usesLength
+      ? selectedService.lengthPrices.find(
+          (item) => item.length === selectedLength,
+        )?.price ?? 0
+      : selectedService.price
+    : 0
+  const effectsPrice = selectedEffects.reduce((total, selection) => {
+    const price = catalog?.effectsByPrice.find((group) =>
+      group.options.some((effect) => effect.id === selection.id),
+    )?.price ?? 0
+    return total + price * selection.count
+  }, 0)
+  const removalConfig = catalog?.removals[serviceCode]
+  const removalPrice = removal ? removalConfig?.price ?? 0 : 0
+  const estimatedTotal = basePrice + effectsPrice + removalPrice
+  const estimatedDuration =
+    (selectedService?.durationMinutes ?? 0) +
+    (removal ? removalConfig?.durationMinutes ?? 0 : 0)
+  const calendarKey = `${calendarMonth}:${selectionKey}`
   const calendarAvailability =
     calendarData?.key === calendarKey ? calendarData.dates : null
-  const calendarLoading = step === 1 && Boolean(serviceCode) && !calendarAvailability
-  const availabilityKey = `${date}:${serviceCode}`
+  const calendarSlotCounts =
+    calendarData?.key === calendarKey ? calendarData.totalSlots : null
+  const calendarLoading =
+    step === 1 && Boolean(serviceCode) && !calendarAvailability
+  const availabilityKey = `${date}:${selectionKey}`
   const availabilityLoading = Boolean(date) && reservedKey !== availabilityKey
-  const availableTimeSlots = timeSlots.filter(
-    (slot) =>
-      reservedKey !== availabilityKey ||
-      !reservedTimes.includes(slot),
-  )
+  const currentAvailableTimes =
+    reservedKey === availabilityKey ? availableTimes : []
   const monthDate = new Date(`${calendarMonth}-01T12:00:00`)
   const formattedMonthTitle = new Intl.DateTimeFormat('es-MX', {
     month: 'long',
@@ -101,14 +157,14 @@ export const Booking: FC = () => {
   const minimumCalendarMonth = today.slice(0, 7)
 
   useEffect(() => {
-    if (!date || !serviceCode) {
+    if (!date || !serviceCode || !selectedService) {
       return
     }
     let cancelled = false
-    loadAvailability(date, serviceCode)
-      .then((times) => {
+    loadAvailability(date, bookingSelection)
+      .then(({ availableTimes: times }) => {
         if (!cancelled) {
-          setReservedTimes(times)
+          setAvailableTimes(times)
           setReservedKey(availabilityKey)
           setError('')
         }
@@ -116,7 +172,7 @@ export const Booking: FC = () => {
       .catch((loadError: unknown) => {
         if (!cancelled) {
           setReservedKey(availabilityKey)
-          setReservedTimes(timeSlots)
+          setAvailableTimes([])
           setError(
             loadError instanceof Error
               ? loadError.message
@@ -128,22 +184,31 @@ export const Booking: FC = () => {
     return () => {
       cancelled = true
     }
-  }, [availabilityKey, date, loadAvailability, serviceCode])
+  }, [availabilityKey, bookingSelection, date, loadAvailability, selectedService, serviceCode])
 
   useEffect(() => {
     if (step !== 1 || !serviceCode) {
       return
     }
     let cancelled = false
-    loadCalendarAvailability(calendarMonth, serviceCode)
-      .then((dates) => {
+    loadCalendarAvailability(calendarMonth, bookingSelection)
+      .then(({ availableTimesByDate, totalSlotsByDate }) => {
         if (!cancelled) {
-          setCalendarData({ key: calendarKey, dates })
+          setCalendarData({
+            key: calendarKey,
+            dates: availableTimesByDate,
+            totalSlots: totalSlotsByDate,
+          })
           setCalendarError('')
         }
       })
       .catch((loadError: unknown) => {
         if (!cancelled) {
+          setCalendarData({
+            key: calendarKey,
+            dates: {},
+            totalSlots: {},
+          })
           setCalendarError(
             loadError instanceof Error
               ? loadError.message
@@ -155,11 +220,17 @@ export const Booking: FC = () => {
     return () => {
       cancelled = true
     }
-  }, [calendarKey, calendarMonth, loadCalendarAvailability, serviceCode, step])
+  }, [bookingSelection, calendarKey, calendarMonth, loadCalendarAvailability, serviceCode, step])
 
   const handleSignOut = () => {
     signOut()
     navigate('/login', { replace: true })
+  }
+
+  const resetSchedule = () => {
+    setDate('')
+    setTime('')
+    setError('')
   }
 
   const handleConfirm = async (event: FormEvent<HTMLFormElement>) => {
@@ -171,11 +242,11 @@ export const Booking: FC = () => {
 
     setIsSubmitting(true)
     try {
-      await createAppointment(serviceCode, date, time)
+      await createAppointment(bookingSelection, date, time)
       await refreshClientAppointments()
       setError('')
       setConfirmed(true)
-      setReservedTimes((times) => [...times, time])
+      setAvailableTimes((times) => times.filter((slot) => slot !== time))
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -196,6 +267,11 @@ export const Booking: FC = () => {
             Estudio de belleza
           </p>
         </div>
+        {currentAvailableTimes.length === 0 && !availabilityLoading && (
+          <p className="mt-4 text-sm text-stone-500">
+            No quedan horarios disponibles para esta fecha y selección.
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <Link
             className="rounded-full border border-rose-200 px-3 py-2 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
@@ -309,18 +385,34 @@ export const Booking: FC = () => {
                               : 'border-stone-200 hover:border-rose-300 hover:bg-rose-50/40'
                           }`}
                           key={service.serviceCode}
-                          onClick={() => setServiceCode(service.serviceCode)}
+                          onClick={() => {
+                            setServiceCode(service.serviceCode)
+                            setSelectedLength(
+                              service.usesLength
+                                ? service.lengthPrices[0]?.length ?? null
+                                : null,
+                            )
+                            setEffectCounts({})
+                            setRemoval(false)
+                            setDate('')
+                            setTime('')
+                          }}
                           type="button"
                         >
                           <span className="flex h-full items-center justify-between gap-3">
                             <span className="min-w-0">
-                              <span className="block text-sm font-semibold text-slate-900">
+                              <span
+                                className={`block text-sm font-semibold ${
+                                  isSelected ? 'text-white' : 'text-slate-900'
+                                }`}
+                              >
                                 {service.name}
                               </span>
-                              <span className="mt-1 block text-xs text-stone-500">
+                              <span className={`mt-1 block text-xs ${isSelected ? 'text-violet-200' : 'text-stone-500'}`}>
                                 {service.durationMinutes} min
                               </span>
-                              <span className="mt-2 block font-semibold text-rose-600">
+                              <span className={`mt-2 block font-semibold ${isSelected ? 'text-violet-100' : 'text-rose-600'}`}>
+                                {service.usesLength ? 'Desde ' : ''}
                                 {money.format(service.price)}
                               </span>
                             </span>
@@ -344,6 +436,142 @@ export const Booking: FC = () => {
                       )
                     })}
                   </div>
+                  {services.length === 0 && !servicesError && (
+                    <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${isCatalogLoading ? 'bg-stone-100 text-stone-600' : 'bg-amber-50 text-amber-800'}`} role="status">
+                      {isCatalogLoading
+                        ? 'Cargando catálogo de técnicas…'
+                        : 'No hay técnicas disponibles por el momento.'}
+                    </p>
+                  )}
+                  {selectedService && catalog && (
+                    <div className="mt-6 space-y-5">
+                      {selectedService.usesLength && (
+                        <section aria-labelledby="length-label">
+                          <h3 className="text-sm font-semibold text-[#402b35]" id="length-label">
+                            Elige el largo
+                          </h3>
+                          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-8">
+                            {selectedService.lengthPrices.map((item) => (
+                              <button
+                                aria-pressed={selectedLength === item.length}
+                                className={`rounded-xl border px-2 py-2 text-center transition ${
+                                  selectedLength === item.length
+                                    ? 'border-violet-500 bg-[#30203f] text-violet-100'
+                                    : 'border-rose-100 bg-white text-stone-700 hover:border-rose-400'
+                                }`}
+                                key={item.length}
+                                onClick={() => {
+                                  setSelectedLength(item.length)
+                                  resetSchedule()
+                                }}
+                                type="button"
+                              >
+                                <span className="block text-sm font-semibold">
+                                  {item.length}
+                                </span>
+                                <span className="block text-[10px]">
+                                  {money.format(item.price)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      <section aria-labelledby="effects-label">
+                        <div>
+                          <h3 className="text-sm font-semibold text-[#402b35]" id="effects-label">
+                            Efectos y decoración
+                          </h3>
+                          <p className="mt-1 text-xs text-stone-500">
+                            Elige de 0 a 10 uñas por efecto.
+                          </p>
+                        </div>
+                        <div className="mt-3 space-y-4">
+                          {catalog.effectsByPrice.map((group) => (
+                            <fieldset className="rounded-xl border border-rose-100 p-3" key={group.price}>
+                              <legend className="px-1 text-xs font-semibold text-rose-800">
+                                {money.format(group.price)} por uña
+                              </legend>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {group.options.map((effect) => {
+                                  const count = effectCounts[effect.id] ?? 0
+                                  return (
+                                    <div
+                                      className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-[#fffaf9] px-3 py-2"
+                                      key={effect.id}
+                                    >
+                                      <span className="min-w-0 text-sm text-stone-700">
+                                        {effect.name}
+                                      </span>
+                                      <span className="flex shrink-0 items-center gap-2">
+                                        <button
+                                          aria-label={`Quitar una uña de ${effect.name}`}
+                                          className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-lg text-rose-800 disabled:opacity-40"
+                                          disabled={count === 0}
+                                          onClick={() => {
+                                            setEffectCounts((current) => ({
+                                              ...current,
+                                              [effect.id]: Math.max(0, count - 1),
+                                            }))
+                                            resetSchedule()
+                                          }}
+                                          type="button"
+                                        >
+                                          −
+                                        </button>
+                                        <span aria-live="polite" className="w-5 text-center text-sm font-semibold text-stone-800">
+                                          {count}
+                                        </span>
+                                        <button
+                                          aria-label={`Agregar una uña de ${effect.name}`}
+                                          className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-lg text-rose-800 disabled:opacity-40"
+                                          disabled={count === 10}
+                                          onClick={() => {
+                                            setEffectCounts((current) => ({
+                                              ...current,
+                                              [effect.id]: Math.min(10, count + 1),
+                                            }))
+                                            resetSchedule()
+                                          }}
+                                          type="button"
+                                        >
+                                          +
+                                        </button>
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </fieldset>
+                          ))}
+                        </div>
+                      </section>
+
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-rose-100 bg-[#fffaf9] p-4">
+                        <input
+                          checked={removal}
+                          className="mt-1 h-4 w-4 accent-violet-700"
+                          onChange={(event) => {
+                            setRemoval(event.target.checked)
+                            resetSchedule()
+                          }}
+                          type="checkbox"
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold text-stone-800">
+                            Retiro de trabajo anterior
+                          </span>
+                          <span className="mt-1 block text-xs text-stone-500">
+                            {money.format(removalConfig?.price ?? 0)} ·{' '}
+                            {removalConfig?.durationMinutes
+                              ? `+ ${removalConfig.durationMinutes} min`
+                              : 'sin tiempo adicional'}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -424,7 +652,8 @@ export const Booking: FC = () => {
                           const isPast = dateKey < today
                           const dayTimes = calendarAvailability?.[dateKey] ?? []
                           const isAvailable = dayTimes.length > 0
-                          const occupiedSlots = timeSlots.length - dayTimes.length
+                          const occupiedSlots =
+                            (calendarSlotCounts?.[dateKey] ?? 0) - dayTimes.length
                           const hasLimitedAvailability =
                             isAvailable && occupiedSlots >= 3
                           const isOccupied =
@@ -512,8 +741,7 @@ export const Booking: FC = () => {
                       ) : date ? (
                         <>
                           <div className="mt-5 grid grid-cols-2 gap-2">
-                            {timeSlots.map((slot) => {
-                              const isAvailable = availableTimeSlots.includes(slot)
+                            {currentAvailableTimes.map((slot) => {
                               const isSelected = time === slot
                               return (
                                 <button
@@ -521,11 +749,8 @@ export const Booking: FC = () => {
                                   className={`rounded-xl border px-3 py-3 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-rose-300/40 ${
                                     isSelected
                                       ? 'border-rose-700 bg-rose-700 text-white shadow-md shadow-rose-900/15'
-                                      : isAvailable
-                                        ? 'border-rose-100 bg-[#fffaf9] text-stone-700 hover:border-rose-400 hover:bg-rose-50'
-                                        : 'cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400 line-through'
+                                      : 'border-rose-100 bg-[#fffaf9] text-stone-700 hover:border-rose-400 hover:bg-rose-50'
                                   }`}
-                                  disabled={!isAvailable}
                                   key={slot}
                                   onClick={() => setTime(slot)}
                                   type="button"
@@ -534,9 +759,7 @@ export const Booking: FC = () => {
                                   <span className="mt-1 block text-[10px] font-normal no-underline">
                                     {isSelected
                                       ? 'Seleccionado'
-                                      : isAvailable
-                                        ? 'Disponible'
-                                        : 'Ocupado'}
+                                      : 'Disponible'}
                                   </span>
                                 </button>
                               )
@@ -550,10 +773,6 @@ export const Booking: FC = () => {
                             <span className="flex items-center gap-2">
                               <span className="h-3 w-3 rounded-full bg-rose-700" />
                               Seleccionado
-                            </span>
-                            <span className="flex items-center gap-2">
-                              <span className="h-3 w-3 rounded-full bg-stone-200" />
-                              Ocupado
                             </span>
                           </div>
                         </>
@@ -602,10 +821,13 @@ export const Booking: FC = () => {
                 <div>
                   <p className="text-xs text-stone-500">Total estimado</p>
                   <p className="text-2xl font-bold tracking-tight text-slate-900">
-                    {money.format(selectedService?.price ?? 0)}
+                    {money.format(estimatedTotal)}
                   </p>
                   <p className="text-xs text-stone-500">
-                    Tiempo aprox: {selectedService?.durationMinutes ?? 0} min
+                    Base {money.format(basePrice)} · Efectos {money.format(effectsPrice)} · Retiro {money.format(removalPrice)}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Tiempo aprox: {estimatedDuration} min
                     {date && time ? ` · ${date} a las ${time}` : ''}
                   </p>
                 </div>
@@ -626,7 +848,10 @@ export const Booking: FC = () => {
                     <button
                       className="rounded-full bg-rose-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-stone-300"
                       disabled={
-                        (step === 0 && (!serviceCode || services.length === 0)) ||
+                        (step === 0 &&
+                          (!serviceCode ||
+                            services.length === 0 ||
+                            (selectedService?.usesLength && selectedLength === null))) ||
                         (step === 1 &&
                           (!date || !time || availabilityLoading || Boolean(error)))
                       }
@@ -679,6 +904,9 @@ export const Booking: FC = () => {
                   <div>
                     <h3 className="font-semibold text-stone-900">
                       {appointment.service}
+                      {appointment.notes && (
+                        <p className="mt-1 text-xs text-stone-500">{appointment.notes}</p>
+                      )}
                     </h3>
                     <p className="mt-1 text-sm text-stone-600">
                       {appointment.date} · {appointment.time} ·{' '}
@@ -712,7 +940,8 @@ export const Booking: FC = () => {
           )}
         </section>
         <p className="mt-5 text-center text-xs text-stone-500">
-          Precios en MXN. El horario está sujeto a confirmación.
+          Precios en MXN. Horario: {catalog?.schedule.openingTime}–{catalog?.schedule.closingTime},{' '}
+          {catalog?.schedule.dayNames.join(', ')}; cerrado {catalog?.schedule.closedDays.join(', ')}.
         </p>
       </main>
     </div>

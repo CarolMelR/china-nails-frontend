@@ -7,13 +7,34 @@ import {
 } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { apiRequest } from '../lib/api'
-import { AppointmentContext, type Appointment, type Service } from './AppointmentContext'
+import {
+  AppointmentContext,
+  type Appointment,
+  type BookingCatalog,
+  type BookingSelection,
+  type CalendarAvailability,
+  type CatalogTechnique,
+} from './AppointmentContext'
+
+const selectionParams = (selection: BookingSelection) => {
+  const query = new URLSearchParams({
+    serviceCode: selection.serviceCode,
+    effects: JSON.stringify(selection.effects),
+    removal: String(selection.removal),
+  })
+  if (selection.length !== null) {
+    query.set('length', String(selection.length))
+  }
+  return query
+}
 
 export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
   const { ready, user } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [clientAppointments, setClientAppointments] = useState<Appointment[]>([])
-  const [services, setServices] = useState<Service[]>([])
+  const [services, setServices] = useState<CatalogTechnique[]>([])
+  const [catalog, setCatalog] = useState<BookingCatalog | null>(null)
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true)
   const [loadedAdminId, setLoadedAdminId] = useState<number | null>(null)
   const [loadedClientId, setLoadedClientId] = useState<number | null>(null)
   const [servicesError, setServicesError] = useState('')
@@ -28,14 +49,17 @@ export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
 
   useEffect(() => {
     let cancelled = false
-    apiRequest<{ services: Service[] }>('/services')
-      .then(({ services: activeServices }) => {
+    apiRequest<BookingCatalog>('/catalog')
+      .then((loadedCatalog) => {
         if (!cancelled) {
-          setServices(activeServices)
+          setCatalog(loadedCatalog)
+          setServices(loadedCatalog.techniques)
+          setIsCatalogLoading(false)
         }
       })
       .catch((loadError: unknown) => {
         if (!cancelled) {
+          setIsCatalogLoading(false)
           setServicesError(
             loadError instanceof Error
               ? loadError.message
@@ -135,33 +159,39 @@ export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
     }
   }, [adminId, ready])
 
-  const loadAvailability = useCallback(async (date: string, serviceCode: string) => {
-    const query = new URLSearchParams({ date, serviceCode })
-    const response = await apiRequest<{ reservedTimes: string[] }>(
+  const loadAvailability = useCallback(async (
+    date: string,
+    selection: BookingSelection,
+  ) => {
+    const query = selectionParams(selection)
+    query.set('date', date)
+    return apiRequest<{
+      availableTimes: string[]
+      totalSlots: number
+    }>(
       `/appointments/availability?${query.toString()}`,
     )
-    return response.reservedTimes
   }, [])
 
   const loadCalendarAvailability = useCallback(async (
     month: string,
-    serviceCode: string,
+    selection: BookingSelection,
   ) => {
-    const query = new URLSearchParams({ month, serviceCode })
-    const response = await apiRequest<{
-      availableTimesByDate: Record<string, string[]>
-    }>(`/appointments/calendar?${query.toString()}`)
-    return response.availableTimesByDate
+    const query = selectionParams(selection)
+    query.set('month', month)
+    return apiRequest<CalendarAvailability>(
+      `/appointments/calendar?${query.toString()}`,
+    )
   }, [])
 
   const createAppointment = useCallback(async (
-    serviceCode: string,
+    selection: BookingSelection,
     date: string,
     time: string,
   ) => {
     await apiRequest('/appointments', {
       method: 'POST',
-      body: JSON.stringify({ serviceCode, date, time }),
+      body: JSON.stringify({ ...selection, date, time }),
     })
   }, [])
 
@@ -215,6 +245,8 @@ export const AppointmentProvider: FC<PropsWithChildren> = ({ children }) => {
         appointments,
         clientAppointments,
         services,
+        catalog,
+        isCatalogLoading,
         isLoading,
         isClientAppointmentsLoading,
         error,
