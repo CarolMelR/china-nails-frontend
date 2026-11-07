@@ -429,7 +429,7 @@ export const Finances: FC = () => {
             </label>
           </div>
           <button
-            className="rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60"
+            className="rounded-full bg-[#54306e] px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-violet-950/30 transition hover:bg-[#684085] disabled:cursor-wait disabled:opacity-60"
             disabled={submitting !== null}
             type="submit"
           >

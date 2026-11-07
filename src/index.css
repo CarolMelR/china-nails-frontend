@@ -28,12 +28,12 @@
   --color-orange-100: #24162f;
   --color-orange-800: #d8b4fe;
 
-  --color-emerald-50: #10231c;
-  --color-emerald-100: #17362b;
-  --color-emerald-700: #6ee7b7;
-  --color-emerald-800: #86efc2;
-  --color-emerald-900: #a7f3d0;
-  --color-emerald-950: #d1fae5;
+  --color-emerald-50: #17221f;
+  --color-emerald-100: #21342f;
+  --color-emerald-700: #91d8bd;
+  --color-emerald-800: #a7e6cc;
+  --color-emerald-900: #c0f0dc;
+  --color-emerald-950: #ddf7e9;
 
   --color-sky-50: #111d2a;
   --color-sky-100: #162d40;
@@ -84,10 +84,31 @@ body {
   width: 100%;
   margin: 0;
   background:
-    radial-gradient(ellipse at 12% 0%, rgb(91 33 182 / 18%), transparent 34rem),
-    radial-gradient(ellipse at 90% 20%, rgb(126 34 206 / 11%), transparent 30rem),
+    radial-gradient(ellipse at 12% 0%, rgb(124 58 237 / 20%), transparent 34rem),
+    radial-gradient(ellipse at 88% 18%, rgb(168 85 247 / 13%), transparent 30rem),
+    radial-gradient(ellipse at 72% 82%, rgb(91 33 182 / 10%), transparent 35rem),
     var(--cn-background);
   color: #f7f3fc;
+}
+
+.home-page {
+  position: relative;
+  isolation: isolate;
+}
+
+.home-page::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgb(233 213 255 / 55%) 0 1px, transparent 1.8px),
+    radial-gradient(circle, rgb(192 132 252 / 45%) 0 1px, transparent 2px),
+    radial-gradient(ellipse at 48% 38%, rgb(126 34 206 / 10%), transparent 36rem);
+  background-position: 0 0, 78px 54px, center;
+  background-size: 154px 166px, 218px 236px, 100% 100%;
+  content: "";
+  opacity: 0.32;
+  pointer-events: none;
 }
 
 #root {

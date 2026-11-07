@@ -305,7 +305,7 @@ export const Booking: FC = () => {
                           aria-pressed={isSelected}
                           className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-4 focus:ring-rose-500/10 ${
                             isSelected
-                              ? 'border-rose-500 bg-rose-50 ring-1 ring-rose-500'
+                            ? 'border-violet-400 bg-[#2b193c] ring-1 ring-violet-400 shadow-lg shadow-violet-950/25'
                               : 'border-stone-200 hover:border-rose-300 hover:bg-rose-50/40'
                           }`}
                           key={service.serviceCode}
@@ -445,7 +445,7 @@ export const Booking: FC = () => {
                                     : isOccupied
                                       ? 'cursor-not-allowed bg-stone-100 text-stone-400'
                                       : hasLimitedAvailability
-                                        ? 'border border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100'
+                                        ? 'border border-violet-300 bg-[#30203f] text-violet-200 hover:border-violet-200 hover:bg-[#3b2750]'
                                         : isAvailable
                                           ? 'border border-rose-100 bg-white text-stone-700 hover:border-rose-400 hover:bg-rose-50'
                                           : 'cursor-not-allowed bg-stone-100 text-stone-300'

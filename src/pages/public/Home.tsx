@@ -56,7 +56,7 @@ export const Home: FC = () => {
   }, [])
 
   return (
-    <>
+    <div className="home-page">
       <section className="mx-auto grid min-h-[calc(100vh-72px)] max-w-7xl items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:px-10">
         <div className="max-w-xl">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-rose-700">
@@ -177,6 +177,6 @@ export const Home: FC = () => {
           </p>
         </div>
       </footer>
-    </>
+    </div>
   )
 }
