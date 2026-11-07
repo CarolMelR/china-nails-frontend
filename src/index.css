@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-rose-50: #f3e8ff;
-  --color-rose-100: #e9d5ff;
-  --color-rose-200: #d8b4fe;
+  --color-rose-50: #261b33;
+  --color-rose-100: #30213e;
+  --color-rose-200: #4a345d;
   --color-rose-300: #c084fc;
   --color-rose-400: #a855f7;
   --color-rose-500: #9333ea;
@@ -150,7 +150,8 @@ video {
 }
 
 [class~="bg-[#fbe0e0]"],
-[class~="bg-[#edcfca]"] {
+[class~="bg-[#edcfca]"],
+[class~="bg-[#fffaf9]"] {
   background-color: var(--cn-surface-raised);
 }
 
